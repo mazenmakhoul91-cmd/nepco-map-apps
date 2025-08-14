@@ -345,10 +345,12 @@
         }
 
         /* Leaflet Control Layer Custom Position */
-        .leaflet-control-layers.leaflet-bottom.leaflet-left {
-            bottom: 100px !important; /* Adjusted to be higher up, above copyright */
+        .leaflet-control-layers.leaflet-top.leaflet-left {
+            top: 100px !important; /* Position below zoom controls */
             left: 10px !important;
-            font-size: 1.125rem; /* Increased font size for layers control */
+            font-size: 1.125rem; /* Retain increased font size for layers control */
+            z-index: 1003; /* Ensure it's above copyright and sidebar */
+            cursor: default; /* Not draggable anymore */
         }
 
     </style>
@@ -592,7 +594,8 @@
             });
             L.control.zoom({ position: 'topleft' }).addTo(map);
 
-            L.control.layers(mapLayers, {}, { position: 'bottomleft', collapsed: false }).addTo(map);
+            // Reverted layers control position to topleft, so it appears below zoom controls
+            L.control.layers(mapLayers, {}, { position: 'topleft', collapsed: false }).addTo(map);
 
             mapOptionButtons.forEach(button => {
                 button.addEventListener('click', () => {
@@ -630,7 +633,7 @@
                 }
             });
 
-            const checkboxes = document.querySelectorAll('input[name="region-filter"]');
+            const checkboxes = document.querySelectorAll('input[name="region-filter"]'); 
             checkboxes.forEach(checkbox => {
                 checkbox.addEventListener('change', () => {
                     const regionName = checkbox.value;
