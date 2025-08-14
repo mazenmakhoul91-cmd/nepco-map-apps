@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خريطة محطات شركة الكهرباء الوطنية (NEPCO)</title>
+
+    <!-- LeafletJS CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Cairo for Arabic text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        #map {
+            flex-grow: 1;
+            height: 100%;
+            transition: margin-right 0.3s ease-in-out;
+            /* Adjust map margin for sidebar to be visible by default */
+            margin-right: 320px; 
+        }
+        #sidebar {
+            width: 320px;
+            min-width: 320px;
+            height: 100%;
+            background-color: #f8fafc; /* gray-50 */
+            border-left: 1px solid #e2e8f0; /* gray-200 */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 1001;
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(0); /* Visible by default */
+        }
+        #sidebar.hidden {
+            transform: translateX(100%); /* Hide sidebar */
+        }
+        #sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        #sidebar-content {
+            padding: 16px;
+            flex-grow: 1;
+        }
+        /* Toggle Button */
+        #sidebar-toggle {
+            position: absolute;
+            top: 15px;
+            /* Adjust right position based on sidebar visibility */
+            right: 335px; /* 320px sidebar width + 15px margin */
+            z-index: 1002;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: right 0.3s ease-in-out;
+        }
+        #sidebar.hidden + #sidebar-toggle {
+            right: 15px; /* When sidebar is hidden, move button to map edge */
+        }
+
+        /* Filter styling */
+        .filter-option {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column; /* Stack label and list */
+        }
+        .filter-option label {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background-color: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            margin-bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .filter-option input[type="radio"] {
+            margin-left: 12px;
+            width: 18px;
+            height: 18px;
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        /* Custom radio button appearance */
+        .custom-radio {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 12px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .custom-radio::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #3b82f6; /* Blue for checked state */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            border-radius: 50%;
+            transition: transform 0.2s ease-in-out;
+        }
+        .filter-option input[type="radio"]:checked + label .custom-radio::after {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .filter-option input[type="radio"]:checked + label span {
+            font-weight: 700;
+        }
+        .filter-option label:hover {
+            background-color: #f1f5f9;
+        }
+        .color-box {
+            width: 18px;
+            height: 18px;
+            margin-left: 12px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        .station-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease-out;
+            box-sizing: border-box;
+        }
+        .filter-option input[type="radio"]:checked ~ .station-list {
+            max-height: 500px; /* Adjust as needed for content, makes it "slide down" */
+            border-top: 1px solid #e2e8f0;
+        }
+        .station-list li {
+            padding: 8px 12px;
+            padding-right: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 14px;
+            border-top: 1px solid #edf2f7;
+        }
+        .station-list li:first-child {
+            border-top: none;
+        }
+        .station-list li:hover {
+            background-color: #e0f2fe;
+            color: #0c4a6e;
+        }
+        /* Custom popup styling for larger card */
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 1rem; /* rounded-xl */
+            padding: 1.5rem; /* More padding */
+            background-color: #ffffff;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* Larger shadow */
+            max-width: 300px; /* Max width for the card */
+            min-width: 250px; /* Min width */
+        }
+        .custom-popup .leaflet-popup-content {
+            margin: 0; /* Remove default margin from Leaflet */
+            text-align: center;
+        }
+        .custom-popup .popup-title {
+            font-weight: 800; /* Extra bold */
+            font-size: 1.5rem; /* Larger font size */
+            margin-bottom: 0.5rem; /* Smaller margin below title */
+            color: #1f2937; /* Darker text */
+        }
+        .custom-popup .popup-description {
+            font-size: 0.95rem; /* Slightly larger description font */
+            color: #4b5563; /* Gray text */
+            margin-bottom: 1rem; /* More space before button */
+            line-height: 1.5;
+        }
+        .custom-popup .nav-link {
+            display: inline-block;
+            padding: 0.75rem 1.25rem; /* Larger padding for button */
+            background-color: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 0.5rem; /* More rounded */
+            font-size: 1rem; /* Larger button text */
+            font-weight: 600; /* Semi-bold */
+            transition: background-color 0.2s ease-in-out;
+        }
+        .custom-popup .nav-link:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div id="sidebar-header">
+            <h1 class="text-xl font-bold text-center text-gray-800">محطات NEPCO</h1>
+        </div>
+        <div id="sidebar-content">
+            <div id="filter-container">
+                <!-- Filter options will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <button id="sidebar-toggle">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- Data Structure (Parsed from your CSV files) ---
+        // Note: X corresponds to Longitude, Y to Latitude in your CSVs. Leaflet uses [Latitude, Longitude].
+        const stationsData = [
+            // صيانة الشرق
+            { id: "alrisha400", name: "محطة الريشة 400", region: "صيانة الشرق", coords: [32.5689, 39.0141471], description: "400 ك.ف" },
+            { id: "alrisha11_132", name: "محطة الريشة (11/132) ك.ف", region: "صيانة الشرق", coords: [32.572323, 39.0107256], description: "( 11/132 ) ك.ف" },
+            { id: "alruwaished", name: "محطة الرويشد", region: "صيانة الشرق", coords: [32.4951511, 38.1965012], description: "( 33/132 ) ك.ف" },
+            { id: "alsafawi", name: "محطة الصفاوي", region: "صيانة الشرق", coords: [32.1987671, 37.1177781], description: "( 33/132 ) ك.ف" },
+            { id: "alsafawisolar", name: "محطة الصفاوي الشمسية", region: "صيانة الشرق", coords: [32.0936842, 37.024402], description: "( 132 ) ك.ف" },
+            { id: "alazraq", name: "محطة الازرق", region: "صيانة الشرق", coords: [31.8702305, 36.7655758], description: "( 33/132 /11 ) ك.ف" },
+            { id: "alethaa", name: "محطة الاذاعة", region: "صيانة الشرق", coords: [31.7306144, 36.4573091], description: "( 33/132 ) ك.ف" },
+            { id: "almwaqarind", name: "محطة الموقر الصناعية", region: "صيانة الشرق", coords: [31.7922558, 36.227272], description: "( 33/132 ) ك.ف" },
+            { id: "alhizam", name: "محطة الحزام", region: "صيانة الشرق", coords: [31.9903638, 36.0469029], description: "( 33/132 ) ك.ف" },
+
+            // صيانة الشمال
+            { id: "subha", name: "محطة صبحا", region: "صيانة الشمال", coords: [32.2622558, 36.4787577], description: "( 33/132 ) ك.ف" },
+            { id: "aldhlail", name: "محطة الضليل", region: "صيانة الشمال", coords: [32.1446554, 36.272777], description: "( 33/132 ) ك.ف" },
+            { id: "alrajhi", name: "محطة الراجحي", region: "صيانة الشمال", coords: [32.2112911, 36.201504], description: "( 33/132 ) ك.ف" },
+            { id: "almafraq", name: "محطة المفرق", region: "صيانة الشمال", coords: [32.3870731, 36.2701028], description: "( 33/132 ) ك.ف" },
+            { id: "alhassanind", name: "محطة الحسن الصناعية", region: "صيانة الشمال", coords: [32.4941724, 36.0276408], description: "( 33/132 ) ك.ف" },
+            { id: "rehab", name: "محطة رحاب", region: "صيانة الشمال", coords: [32.3306337, 36.0521033], description: "( 33/132 ) ك.ف" },
+            { id: "ishtafina", name: "محطة اشتفينا", region: "صيانة الشمال", coords: [32.3588574, 35.777843], description: "( 33/132 ) ك.ف" },
+            { id: "waqas", name: "محطة وقاص", region: "صيانة الشمال", coords: [32.5508877, 35.6607739], description: "( 33/132 ) ك.ف" },
+            { id: "eastirbid", name: "محطة شرق اربد", region: "صيانة الشمال", coords: [32.556473, 35.9077008], description: "( 33/132 ) ك.ف" },
+            { id: "irbid", name: "محطة اربد", region: "صيانة الشمال", coords: [32.5344734, 35.8666052], description: "( 33/132 ) ك.ف" },
+
+            // صيانة العقبة
+            { id: "alquwairasolar", name: "محطة القويرة الشمسية", region: "صيانة العقبة", coords: [29.7282628, 35.3545944], description: "132 ك.ف" },
+            { id: "alquwaira", name: "محطة القويرة", region: "صيانة العقبة", coords: [29.7163417, 35.2954441], description: "132 ك.ف" },
+            { id: "aqabaind", name: "محطة العقبة الصناعية", region: "صيانة العقبة", coords: [29.59594, 35.0413122], description: "132 ك.ف" },
+            { id: "aqabaA2", name: "محطة العقبة A2", region: "صيانة العقبة", coords: [29.5506402, 35.0282299], description: "132 ك.ف" },
+            { id: "seacable400", name: "محطة الكبل البحري 400", region: "صيانة العقبة", coords: [29.432296, 34.9772449], description: "400 ك.ف" },
+            { id: "aqabathermal", name: "محطة العقبة الحرارية", region: "صيانة العقبة", coords: [29.379168, 34.9765758], description: "132 ك.ف" },
+            { id: "aqabathermal400", name: "محطة العقبة الحرارية 400", region: "صيانة العقبة", coords: [29.3791715, 34.9768883], description: "400 ك.ف" },
+
+            // صيانة الكرك
+            { id: "alatarat400", name: "محطة العطارات 400", region: "صيانة الكرك", coords: [31.268596, 36.4451965], description: "400 ك.ف" },
+            { id: "alqatranah400", name: "محطة القطرانة 400", region: "صيانة الكرك", coords: [31.2187445, 36.0173106], description: "400 ك.ف" },
+            { id: "alqatranah", name: "محطة القطرانة", region: "صيانة الكرك", coords: [31.2191069, 36.0174555], description: "132 ك.ف" },
+            { id: "newkarak", name: "محطة الكرك الجديدة", region: "صيانة الكرك", coords: [31.1628214, 35.7384468], description: "132 ك.ف" },
+            { id: "oldkarak", name: "محطة الكرك القديمة", region: "صيانة الكرك", coords: [31.1703272, 35.7246764], description: "132 ك.ف" },
+            { id: "qatranacement", name: "محطة اسمنت القطرانة", region: "صيانة الكرك", coords: [31.1879033, 36.0712772], description: "132 ك.ف" },
+            { id: "hadeethacement", name: "محطة اسمنت الحديثة", region: "صيانة الكرك", coords: [31.3340538, 36.1233459], description: "132 ك.ف" },
+            { id: "ghoursafi", name: "محطة غور الصافي", region: "صيانة الكرك", coords: [31.0939395, 35.5186223], description: "132 ك.ف" },
+            { id: "alhassa", name: "محطة الحسا", region: "صيانة الكرك", coords: [30.8346303, 36.025466], description: "132 ك.ف" },
+            { id: "mas", name: "محطة ماس", region: "صيانة الكرك", coords: [30.7459217, 35.7758451], description: "132 ك.ف" },
+            { id: "zainel", name: "محطة زينيل", region: "صيانة الكرك", coords: [30.7803224, 35.6748431], description: "132 ك.ف" },
+
+            // صيانة الوسط
+            { id: "southamman", name: "محطة جنوب عمان", region: "صيانة الوسط", coords: [31.8934973, 35.9065728], description: "132 ك.ف" },
+            { id: "southamman400", name: "محطة جنوب عمان 400", region: "صيانة الوسط", coords: [31.8930828, 35.9068073], description: "400 ك.ف" },
+            { id: "eastammanipp4", name: "محطة شرق عمان IPP4", region: "صيانة الوسط", coords: [31.9001749, 36.0829251], description: "132 ك.ف" },
+            { id: "eastammanipp1_400", name: "محطة شرق عمان IPP1 400", region: "صيانة الوسط", coords: [31.8967146, 36.0822113], description: "400 ك.ف" },
+            { id: "eastammanipp3_400", name: "محطة شرق عمان IPP3 400", region: "صيانة الوسط", coords: [31.9069535, 36.1802923], description: "400 ك.ف" },
+            { id: "masdar", name: "محطة مصدر", region: "صيانة الوسط", coords: [31.8668281, 36.2023123], description: "132 ك.ف" },
+            { id: "almwaqar", name: "محطة الموقر", region: "صيانة الوسط", coords: [31.7972585, 36.1277357], description: "132 ك.ف" },
+            { id: "airportqh", name: "محطة المطار QH", region: "صيانة الوسط", coords: [31.7182405, 35.9429273], description: "132 ك.ف" },
+            { id: "airport400", name: "محطة المطار 400", region: "صيانة الوسط", coords: [31.7168188, 35.9426379], description: "400 ك.ف" },
+            { id: "airportql2", name: "محطة المطار QL2", region: "صيانة الوسط", coords: [31.7214744, 35.9753382], description: "132 ك.ف" },
+            { id: "kfw", name: "محطة KFW", region: "صيانة الوسط", coords: [31.6651416, 35.9098554], description: "132 ك.ف" },
+            { id: "southmadaba", name: "محطة جنوب مادبا", region: "صيانة الوسط", coords: [31.6868185, 35.783141], description: "132 ك.ف" },
+            { id: "sahab", name: "محطة سحاب", region: "صيانة الوسط", coords: [31.8460718, 36.0116901], description: "132 ك.ف" },
+            { id: "almanara", name: "محطة المنارة", region: "صيانة الوسط", coords: [31.8958916, 35.9931905], description: "132 ك.ف" },
+            { id: "alashrafieh", name: "محطة الاشرفية", region: "صيانة الوسط", coords: [31.9359841, 35.9470286], description: "132 ك.ف" },
+            { id: "marka", name: "محطة ماركا", region: "صيانة الوسط", coords: [31.9789979, 35.9710492], description: "132 ك.ف" },
+            { id: "abdoun", name: "محطة عبدون", region: "صيانة الوسط", coords: [31.9403812, 35.8997782], description: "132 ك.ف" },
+            { id: "citycenter", name: "محطة مركز المدينة", region: "صيانة الوسط", coords: [31.9694593, 35.9107755], description: "132 ك.ف" },
+            { id: "university", name: "محطة الجامعة", region: "صيانة الوسط", coords: [31.9978813, 35.874366], description: "132 ك.ف" },
+            { id: "tareq", name: "محطة طارق", region: "صيانة الوسط", coords: [32.0066724, 35.9192683], description: "132 ك.ف" },
+            { id: "northamman", name: "محطة شمال عمان", region: "صيانة الوسط", coords: [32.0368455, 35.9591142], description: "132 ك.ف" },
+            { id: "northamman400", name: "محطة شمال عمان 400", region: "صيانة الوسط", coords: [32.0368501, 35.9598384], description: "400 ك.ف" },
+            { id: "newbayader", name: "محطة البيادر الجديدة", region: "صيانة الوسط", coords: [31.961052, 35.8455887], description: "132 ك.ف" },
+            { id: "oldbayader", name: "محطة البيادر القديمة", region: "صيانة الوسط", coords: [31.9605655, 35.8461629], description: "132 ك.ف" },
+            { id: "fuheis", name: "محطة الفحيص", region: "صيانة الوسط", coords: [31.9982009, 35.7851051], description: "132 ك.ف" },
+            { id: "alsalt", name: "محطة السلط", region: "صيانة الوسط", coords: [32.0343688, 35.7771068], description: "132 ك.ف" },
+            { id: "alsubaihi", name: "محطة الصبيحي", region: "صيانة الوسط", coords: [32.1361993, 35.7026854], description: "132 ك.ف" },
+            { id: "westamman400", name: "محطة غرب عمان 400", region: "صيانة الوسط", coords: [31.9634258, 35.5885051], description: "400 ك.ف" },
+            { id: "alrama", name: "محطة الرامة", region: "صيانة الوسط", coords: [31.8025035, 35.5632573], description: "132 ك.ف" },
+            { id: "suwaimah", name: "محطة سويمة", region: "صيانة الوسط", coords: [31.6898144, 35.5807433], description: "132 ك.ف" },
+
+            // صيانة معان
+            { id: "kozbo", name: "محطة كوزبو", region: "صيانة معان", coords: [30.7358912, 35.6622041], description: "132 ك.ف" },
+            { id: "tafilehwind", name: "محطة رياح الطفيلة", region: "صيانة معان", coords: [30.7103676, 35.6857937], description: "132 ك.ف" },
+            { id: "alrashadiya", name: "محطة الرشادية", region: "صيانة معان", coords: [30.6743242, 35.6382227], description: "132 ك.ف" },
+            { id: "alfjaig", name: "محطة الفجيج", region: "صيانة معان", coords: [30.5590708, 35.6391971], description: "132 ك.ف" },
+            { id: "tafilehcity", name: "محطة مدينة الطفيلة (العيص)", region: "صيانة معان", coords: [30.8242444, 35.6401092], description: "132 ك.ف" },
+            { id: "newmaan400", name: "محطة تحويل معان الجديدة 400", region: "صيانة معان", coords: [30.3113654, 35.7776431], description: "400 ك.ف" },
+            { id: "newmaan", name: "محطة معان الجديدة", region: "صيانة معان", coords: [30.3102493, 35.7765649], description: "132 ك.ف" },
+            { id: "maan", name: "محطة معان", region: "صيانة معان", coords: [30.2068049, 35.7285631], description: "132 ك.ف" },
+            { id: "alhusseinuni", name: "محطة جامعة الحسين", region: "صيانة معان", coords: [30.2506879, 35.6949856], description: "132 ك.ف" },
+            { id: "maansolar", name: "محطة معان الشمسية", region: "صيانة معان", coords: [30.1579119, 35.8155303], description: "132 ك.ف" },
+            { id: "alshidiya", name: "محطة الشيدية", region: "صيانة معان", coords: [29.930958, 36.1350069], description: "132 ك.ف" },
+            { id: "aldeesi", name: "محطة الديسي", region: "صيانة معان", coords: [29.4471293, 35.8254278], description: "132 ك.ف" },
+            { id: "alrajef", name: "محطة الراجف", region: "صيانة معان", coords: [30.157497, 35.4375926], description: "132 ك.ف" }
+        ];
+
+        // --- Map Initialization ---
+        const map = L.map('map').setView([31.0, 36.5], 7.5); // Centered on Jordan
+
+        // Define base map layers
+        const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
+            maxZoom: 18
+        });
+
+        const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        });
+
+        // Google Satellite Hybrid-like Layer (Satellite with Roads and Labels)
+        const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+            maxZoom: 20,
+            subdomains:['mt0','mt1','mt2','mt3'],
+            attribution: '&copy; Google'
+        });
+        
+        // Add default layer (Esri Topo)
+        esriTopo.addTo(map);
+
+        // --- Regions Configuration (Colors and Layer Groups) ---
+        const regions = {};
+        const uniqueRegions = [...new Set(stationsData.map(station => station.region))].sort(); // Sort for consistent order
+        const colors = [
+            '#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#00bcd4', '#ffc107', '#9e9e9e'
+        ];
+        uniqueRegions.forEach((regionName, index) => {
+            regions[regionName] = { color: colors[index % colors.length], layer: L.layerGroup() };
+        });
+
+        const markers = {};
+
+        // Group stations by region and create markers
+        const stationsByRegion = stationsData.reduce((acc, station) => {
+            if (!acc[station.region]) acc[station.region] = [];
+            acc[station.region].push(station);
+            return acc;
+        }, {});
+
+        // --- Create Markers ---
+        stationsData.forEach(station => {
+            const regionInfo = regions[station.region];
+            if (!regionInfo) {
+                console.warn(`Region "${station.region}" not found for station "${station.name}". Marker not created.`);
+                return;
+            }
+
+            const colorIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color:${regionInfo.color};" class="w-4 h-4 rounded-full border-2 border-white shadow-md"></div>`,
+                iconSize: [16, 16], iconAnchor: [8, 8]
+            });
+
+            // Enhanced popup content with description
+            const popupContent = `
+                <div class="popup-title">${station.name}</div>
+                <p class="popup-description">${station.description}</p>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${station.coords[0]},${station.coords[1]}" target="_blank" class="nav-link">توجه إلى الموقع</a>
+            `;
+
+            const marker = L.marker(station.coords, { icon: colorIcon })
+                .bindPopup(popupContent, { className: 'custom-popup' });
+            
+            regionInfo.layer.addLayer(marker);
+            markers[station.id] = marker;
+        });
+
+        // --- Add Layer Control to Map ---
+        const baseMaps = {
+            "خريطة التضاريس": esriTopo,
+            "خريطة الشوارع": openStreetMap,
+            "القمر الصناعي (شوارع وعلامات)": googleHybrid // Hybrid Satellite layer from Google
+        };
+
+        const overlayMaps = {}; // No overlay maps are needed with this hybrid satellite layer
+        
+        // Moved layer control to bottomleft
+        L.control.layers(baseMaps, overlayMaps, { position: 'bottomleft' }).addTo(map);
+
+
+        // --- Create Sidebar Filters ---
+        const filterContainer = document.getElementById('filter-container');
+
+        // Add "Show All" option
+        const allOption = document.createElement('div');
+        allOption.className = 'filter-option';
+        const allRadioId = 'all-regions-radio';
+        allOption.innerHTML = `
+            <input type="radio" id="${allRadioId}" name="region-filter" value="all" checked>
+            <label for="${allRadioId}">
+                <div class="custom-radio"></div>
+                <div class="color-box bg-gray-400"></div>
+                <span>إظهار الكل</span>
+            </label>
+            <ul class="station-list"></ul>
+        `;
+        filterContainer.appendChild(allOption);
+        
+        // Add options for each region
+        uniqueRegions.forEach(regionName => {
+            const regionStations = stationsByRegion[regionName] || [];
+            
+            const option = document.createElement('div');
+            option.className = 'filter-option';
+
+            const radioId = `${regionName.replace(/\s/g, '')}-radio`; 
+
+            let stationListHTML = '<ul class="station-list">';
+            regionStations.forEach(station => {
+                stationListHTML += `<li data-station-id="${station.id}">${station.name}</li>`;
+            });
+            stationListHTML += '</ul>';
+
+            option.innerHTML = `
+                <input type="radio" id="${radioId}" name="region-filter" value="${regionName}">
+                <label for="${radioId}">
+                    <div class="custom-radio"></div>
+                    <div class="color-box" style="background-color: ${regions[regionName].color};"></div>
+                    <span>${regionName}</span>
+                </label>
+                ${stationListHTML}
+            `;
+            filterContainer.appendChild(option);
+        });
+
+        // --- Event Listeners ---
+        
+        // Filter logic (now also controls station list visibility via CSS)
+        filterContainer.addEventListener('change', (e) => {
+            if (e.target.name === 'region-filter') {
+                const selectedRegion = e.target.value;
+                Object.keys(regions).forEach(regionName => {
+                    const layer = regions[regionName].layer;
+                    if (selectedRegion === 'all' || selectedRegion === regionName) {
+                        if (!map.hasLayer(layer)) map.addLayer(layer);
+                    } else {
+                        if (map.hasLayer(layer)) map.removeLayer(layer);
+                    }
+                });
+            }
+        });
+
+        // Station list click logic
+        filterContainer.addEventListener('click', (e) => {
+            if (e.target.tagName === 'LI') {
+                const stationId = e.target.dataset.stationId;
+                const station = stationsData.find(s => s.id === stationId);
+                if (station) {
+                    const marker = markers[stationId];
+                    if (marker) {
+                        map.flyTo(marker.getLatLng(), 15);
+                        marker.openPopup();
+                    }
+                }
+            }
+        });
+
+        // Sidebar toggle logic
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = document.getElementById('sidebar-toggle');
+        const mapContainer = document.getElementById('map');
+        
+        // Ensure initial state is correctly set
+        document.addEventListener('DOMContentLoaded', () => {
+            sidebar.classList.remove('hidden'); // Ensure sidebar is visible
+            mapContainer.style.marginRight = '320px'; // Adjust map to make space
+            toggleButton.style.right = '335px'; // Position toggle button
+            
+            // Re-apply initial filter if any is checked
+            const initialSelectedRadio = document.querySelector('input[name="region-filter"]:checked');
+            if (initialSelectedRadio) {
+                const selectedRegion = initialSelectedRadio.value;
+                Object.keys(regions).forEach(regionName => {
+                    const layer = regions[regionName].layer;
+                    if (selectedRegion === 'all' || selectedRegion === regionName) {
+                        if (!map.hasLayer(layer)) map.addLayer(layer);
+                    } else {
+                        if (map.hasLayer(layer)) map.removeLayer(layer);
+                    }
+                });
+            } else {
+                // Fallback: Show all layers if no radio is checked by default
+                Object.values(regions).forEach(region => map.addLayer(region.layer));
+            }
+        });
+
+        toggleButton.addEventListener('click', () => {
+            sidebar.classList.toggle('hidden');
+            const isHidden = sidebar.classList.contains('hidden');
+            
+            if (isHidden) {
+                mapContainer.style.marginRight = '0';
+                toggleButton.style.right = '15px';
+            } else {
+                mapContainer.style.marginRight = '320px';
+                toggleButton.style.right = '335px'; // 320px sidebar width + 15px margin
+            }
+            
+            // Give the map time to resize before invalidating
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300); // Should match the CSS transition duration
+        });
+    </script>
+</body>
+</html>
