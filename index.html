@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خريطة محطات شركة الكهرباء الوطنية (NEPCO)</title>
+    <title>محطات شركة الكهرباء الوطنية (NEPCO)</title>
 
     <!-- LeafletJS CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -29,12 +29,18 @@
             flex-grow: 1;
             height: 100%;
             transition: margin-right 0.3s ease-in-out;
-            /* Default: full width on small screens */
-            margin-right: 0; 
+            margin-right: 0; /* Default: full width on small screens */
+            opacity: 0; /* Hide map initially */
+            visibility: hidden; /* Hide map initially */
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out, margin-right 0.3s ease-in-out;
+        }
+        #map.active {
+            opacity: 1; /* Show map after selection */
+            visibility: visible;
         }
 
         #sidebar {
-            width: 100vw; /* Default: full viewport width on small screens */
+            width: 100vw; /* Default: full viewport width for mobile overlay */
             max-width: 320px; /* Limit sidebar width on larger screens */
             height: 100%;
             background-color: #f8fafc; /* gray-50 */
@@ -47,11 +53,11 @@
             right: 0;
             z-index: 1001;
             transition: transform 0.3s ease-in-out;
-            transform: translateX(100%); /* Default: hidden on small screens */
+            transform: translateX(100%); /* Default: hidden on all screens */
         }
 
-        #sidebar.visible {
-            transform: translateX(0); /* Make sidebar visible */
+        #sidebar.is-open { /* Class to explicitly open sidebar */
+            transform: translateX(0);
         }
 
         #sidebar-header {
@@ -77,25 +83,26 @@
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             transition: right 0.3s ease-in-out;
+            display: none; /* Hide toggle button initially until map is active */
         }
 
         /* Media queries for larger screens (e.g., tablets and desktops) */
         @media (min-width: 768px) { /* md breakpoint in Tailwind */
-            #map {
-                margin-right: 320px; /* Make space for sidebar on larger screens */
+            #map.active {
+                margin-right: 320px; /* Make space for sidebar on larger screens when active */
             }
             #sidebar {
                 width: 320px; /* Fixed width on larger screens */
-                transform: translateX(0); /* Always visible on larger screens */
+                transform: translateX(0); /* Always visible by default on desktop */
+            }
+            #sidebar.is-closed-on-desktop { /* Class to hide sidebar specifically on desktop */
+                transform: translateX(100%);
             }
             #sidebar-toggle {
                 right: 335px; /* Pushed by the sidebar on larger screens */
             }
-            #sidebar.hidden {
-                transform: translateX(100%); /* Still allow hiding on large screens */
-            }
-            #sidebar.hidden + #sidebar-toggle {
-                right: 15px; /* Move back to map edge when hidden */
+            #sidebar.is-closed-on-desktop + #sidebar-toggle {
+                right: 15px; /* Move back to map edge when hidden on desktop */
             }
         }
         
@@ -189,7 +196,7 @@
             padding-right: 20px;
             cursor: pointer;
             transition: background-color 0.2s;
-            font-size: 14px;
+            font-size: 16px; /* Increased font size for station names */
             border-top: 1px solid #edf2f7;
         }
         .station-list li:first-child {
@@ -238,13 +245,98 @@
         .custom-popup .nav-link:hover {
             background-color: #2563eb; /* Darker blue on hover */
         }
+
+        /* Modal Styles */
+        #map-selector-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            transition: opacity 0.3s ease-in-out;
+        }
+        #map-selector-modal.hidden {
+            opacity: 0;
+            pointer-events: none; /* Disable interactions when hidden */
+        }
+        #map-selector-content {
+            background-color: white;
+            padding: 2.5rem; /* Increased padding */
+            border-radius: 1rem; /* Rounded corners */
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            transform: translateY(-20px); /* Slight animation on appearance */
+            transition: transform 0.3s ease-in-out;
+        }
+        #map-selector-modal.hidden #map-selector-content {
+            transform: translateY(-50px);
+        }
+        #map-selector-content h2 {
+            font-size: 1.875rem; /* text-3xl */
+            font-weight: 700; /* font-bold */
+            margin-bottom: 1.5rem; /* mb-6 */
+            color: #1f2937;
+        }
+        .map-option-button {
+            display: block;
+            width: 100%;
+            padding: 1rem 1.5rem; /* py-4 px-6 */
+            margin-bottom: 1rem; /* mb-4 */
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border: none;
+            border-radius: 0.5rem; /* rounded-lg */
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+        .map-option-button:hover {
+            background-color: #2563eb; /* blue-600 */
+            transform: translateY(-2px);
+        }
+        .map-option-button:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Custom Copyright Style */
+        #custom-copyright {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 1000;
+            color: #4b5563; /* gray-600 */
+            font-size: 0.875rem; /* text-sm */
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            pointer-events: none; /* Allow clicks through */
+        }
     </style>
 </head>
 <body>
 
+    <!-- Map Selector Modal -->
+    <div id="map-selector-modal">
+        <div id="map-selector-content">
+            <h2>اختر طريقة عرض الخريطة</h2>
+            <button class="map-option-button" data-map-type="terrain">خريطة التضاريس</button>
+            <button class="map-option-button" data-map-type="streets">خريطة الشوارع</button>
+            <button class="map-option-button" data-map-type="satellite">القمر الصناعي (شوارع وعلامات)</button>
+            <div class="mt-4 text-sm text-gray-600">Designed by Mazen Makhoul</div>
+        </div>
+    </div>
+
     <div id="sidebar">
         <div id="sidebar-header">
-            <h1 class="text-xl font-bold text-center text-gray-800">محطات NEPCO</h1>
+            <h1 class="text-xl font-bold text-center text-gray-800">محطات شركة الكهرباء الوطنية (NEPCO)</h1>
         </div>
         <div id="sidebar-content">
             <div id="filter-container">
@@ -258,6 +350,11 @@
     </button>
 
     <div id="map"></div>
+
+    <!-- Custom Copyright -->
+    <div id="custom-copyright">
+        Developed by Mazen Makhoul
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -358,17 +455,16 @@
             { id: "alrajef", name: "محطة الراجف", region: "صيانة معان", coords: [30.157497, 35.4375926], description: "132 ك.ف" }
         ];
 
-        // --- Map Initialization ---
-        const map = L.map('map').setView([31.0, 36.5], 7.5); // Centered on Jordan
+        let map; // Declare map globally so it can be accessed after initialization
 
-        // Define base map layers
+        // Define base map layers with empty attribution
         const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
+            attribution: '', // Hidden
             maxZoom: 18
         });
 
         const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            attribution: '', // Hidden
             maxZoom: 19
         });
 
@@ -376,19 +472,35 @@
         const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
             maxZoom: 20,
             subdomains:['mt0','mt1','mt2','mt3'],
-            attribution: '&copy; Google'
+            attribution: '' // Hidden
         });
         
-        // Add default layer (Esri Topo)
-        esriTopo.addTo(map);
+        // Map layers object for easy access
+        const mapLayers = {
+            terrain: esriTopo,
+            streets: openStreetMap,
+            satellite: googleHybrid
+        };
 
         // --- Regions Configuration (Colors and Layer Groups) ---
         const regions = {};
-        const uniqueRegions = [...new Set(stationsData.map(station => station.region))].sort(); // Sort for consistent order
+        // Define the custom order of regions
+        const customRegionOrder = [
+            "صيانة الشمال",
+            "صيانة الشرق",
+            "صيانة الوسط",
+            "صيانة الكرك",
+            "صيانة معان",
+            "صيانة العقبة"
+        ];
+        // Ensure all unique regions from data are covered, or use this fixed list
+        // If there are regions in data not in customRegionOrder, they won't appear.
+        // For this specific request, we will only show regions in the custom order.
+        
         const colors = [
             '#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#00bcd4', '#ffc107', '#9e9e9e'
         ];
-        uniqueRegions.forEach((regionName, index) => {
+        customRegionOrder.forEach((regionName, index) => { // Loop through custom order
             regions[regionName] = { color: colors[index % colors.length], layer: L.layerGroup() };
         });
 
@@ -405,8 +517,8 @@
         stationsData.forEach(station => {
             const regionInfo = regions[station.region];
             if (!regionInfo) {
-                console.warn(`Region "${station.region}" not found for station "${station.name}". Marker not created.`);
-                return;
+                // console.warn(`Region "${station.region}" not found for station "${station.name}". Marker not created.`);
+                return; // Skip markers for regions not in customRegionOrder if any
             }
 
             const colorIcon = L.divIcon({
@@ -429,18 +541,6 @@
             markers[station.id] = marker;
         });
 
-        // --- Add Layer Control to Map ---
-        const baseMaps = {
-            "خريطة التضاريس": esriTopo,
-            "خريطة الشوارع": openStreetMap,
-            "القمر الصناعي (شوارع وعلامات)": googleHybrid 
-        };
-
-        const overlayMaps = {}; 
-        
-        // Moved layer control to bottomleft
-        L.control.layers(baseMaps, overlayMaps, { position: 'bottomleft' }).addTo(map);
-
 
         // --- Create Sidebar Filters ---
         const filterContainer = document.getElementById('filter-container');
@@ -460,8 +560,8 @@
         `;
         filterContainer.appendChild(allOption);
         
-        // Add options for each region
-        uniqueRegions.forEach(regionName => {
+        // Add options for each region based on custom order
+        customRegionOrder.forEach(regionName => {
             const regionStations = stationsByRegion[regionName] || [];
             
             const option = document.createElement('div');
@@ -519,45 +619,70 @@
             }
         });
 
-        // Sidebar toggle logic
+        // Sidebar and map elements
         const sidebar = document.getElementById('sidebar');
         const toggleButton = document.getElementById('sidebar-toggle');
         const mapContainer = document.getElementById('map');
         
-        // Initial state for sidebar and map based on screen width
+        // Function to set initial layout based on screen width
         const setInitialLayout = () => {
-            if (window.innerWidth >= 768) { // Corresponds to md breakpoint
-                sidebar.classList.remove('hidden'); // Ensure sidebar is visible on large screens
-                mapContainer.style.marginRight = '320px'; // Adjust map to make space
-                toggleButton.style.right = '335px'; // Position toggle button
-            } else {
-                sidebar.classList.add('hidden'); // Ensure sidebar is hidden on small screens
+            if (window.innerWidth >= 768) { // Desktop (md breakpoint and up)
+                sidebar.classList.remove('is-open'); // Ensure it's not mobile-forced open
+                sidebar.classList.remove('is-closed-on-desktop'); // Reset desktop close state
+                sidebar.style.transform = 'translateX(0)'; // Explicitly make it visible
+                mapContainer.style.marginRight = '320px'; // Push map to make space
+                toggleButton.style.right = '335px'; // Position button next to sidebar
+                toggleButton.style.display = 'block'; // Show toggle button
+            } else { // Mobile/Tablet (below md breakpoint)
+                sidebar.classList.remove('is-open'); // Ensure sidebar is hidden by default (via CSS transform)
+                sidebar.classList.remove('is-closed-on-desktop'); // Clean up desktop-specific classes
                 mapContainer.style.marginRight = '0'; // Map takes full width
-                toggleButton.style.right = '15px'; // Position toggle button on map edge
+                toggleButton.style.right = '15px'; // Position button on map edge
+                toggleButton.style.display = 'block'; // Show toggle button
             }
-            map.invalidateSize(); // Invalidate map size after layout change
+            if (map) { // Only invalidate if map is initialized
+                map.invalidateSize(); 
+            }
         };
 
-        // Call once on load
-        document.addEventListener('DOMContentLoaded', () => {
-            setInitialLayout();
-            
-            // Re-apply initial filter if any is checked
-            const initialSelectedRadio = document.querySelector('input[name="region-filter"]:checked');
-            if (initialSelectedRadio) {
-                const selectedRegion = initialSelectedRadio.value;
-                Object.keys(regions).forEach(regionName => {
-                    const layer = regions[regionName].layer;
-                    if (selectedRegion === 'all' || selectedRegion === regionName) {
-                        if (!map.hasLayer(layer)) map.addLayer(layer);
-                    } else {
-                        if (map.hasLayer(layer)) map.removeLayer(layer);
+        // Modal elements
+        const mapSelectorModal = document.getElementById('map-selector-modal');
+        const mapOptionButtons = document.querySelectorAll('.map-option-button');
+
+        // Handle map selection from the modal
+        mapOptionButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const mapType = e.target.dataset.mapType;
+                
+                // Initialize map if not already done
+                if (!map) {
+                    map = L.map('map').setView([31.0, 36.5], 7.5); // Centered on Jordan
+                    // Add Layer Control after map initialization
+                    const baseMaps = {
+                        "خريطة التضاريس": mapLayers.terrain,
+                        "خريطة الشوارع": mapLayers.streets,
+                        "القمر الصناعي (شوارع وعلامات)": mapLayers.satellite 
+                    };
+                    L.control.layers(baseMaps, {}, { position: 'bottomleft' }).addTo(map);
+                }
+
+                // Add selected base layer to map
+                mapLayers[mapType].addTo(map);
+                
+                // Add all station markers layers
+                Object.values(regions).forEach(region => {
+                    if (!map.hasLayer(region.layer)) {
+                        map.addLayer(region.layer);
                     }
                 });
-            } else {
-                // Fallback: Show all layers if no radio is checked by default
-                Object.values(regions).forEach(region => map.addLayer(region.layer));
-            }
+
+                // Hide the modal and show the map
+                mapSelectorModal.classList.add('hidden');
+                mapContainer.classList.add('active'); // Activate map visibility/opacity
+
+                // Set initial layout for sidebar and map based on current screen size
+                setInitialLayout();
+            });
         });
 
         // Listen for window resize to adjust layout
@@ -565,36 +690,29 @@
             setInitialLayout();
         });
 
+        // Initial setup on DOMContentLoaded: show modal first
+        document.addEventListener('DOMContentLoaded', () => {
+            mapSelectorModal.classList.remove('hidden'); 
+            // setInitialLayout will be called after map selection
+        });
 
+        // Toggle button click handler for sidebar
         toggleButton.addEventListener('click', () => {
-            sidebar.classList.toggle('hidden');
-            const isHidden = sidebar.classList.contains('hidden');
-            
-            // Adjust map margin and toggle button position based on visibility
-            // For smaller screens, sidebar will overlay, so map's margin doesn't change based on sidebar visibility
-            // For larger screens, map's margin changes to accommodate sidebar
-            if (window.innerWidth < 768) { // Mobile/Tablet behavior
-                // Sidebar overlays, map margin remains 0
-                // Toggle button position might change if sidebar is shown/hidden
-                if (isHidden) { // Sidebar hidden
-                    toggleButton.style.right = '15px';
-                } else { // Sidebar visible
-                    // Keep toggle button on the map (it's not pushed by sidebar)
-                    toggleButton.style.right = '15px'; 
-                    // Or, if you want it to move with the sidebar on mobile, adjust this
-                    // For now, let's keep it fixed relative to map for simplicity on mobile
-                }
-            } else { // Desktop/Larger screen behavior
-                if (isHidden) {
+            if (window.innerWidth < 768) { // Mobile/Tablet behavior (sidebar overlays)
+                sidebar.classList.toggle('is-open'); // Toggle 'is-open' for mobile
+                // Map margin and toggle button position remains fixed for mobile overlay
+            } else { // Desktop/Larger screen behavior (sidebar pushes map)
+                sidebar.classList.toggle('is-closed-on-desktop'); // Toggle specific class for desktop hiding
+                const isClosedOnDesktop = sidebar.classList.contains('is-closed-on-desktop');
+                if (isClosedOnDesktop) { // Sidebar is hidden on desktop
                     mapContainer.style.marginRight = '0';
                     toggleButton.style.right = '15px';
-                } else {
+                } else { // Sidebar is visible on desktop
                     mapContainer.style.marginRight = '320px';
-                    toggleButton.style.right = '335px'; // 320px sidebar width + 15px margin
+                    toggleButton.style.right = '335px';
                 }
             }
-            
-            // Give the map time to resize before invalidating
+            // Invalidate map size after layout changes
             setTimeout(() => {
                 map.invalidateSize();
             }, 300); // Should match the CSS transition duration
