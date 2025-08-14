@@ -29,22 +29,22 @@
             flex-grow: 1;
             height: 100%;
             transition: margin-right 0.3s ease-in-out;
-            margin-right: 0; /* Default: full width on small screens */
-            opacity: 0; /* Hide map initially */
-            visibility: hidden; /* Hide map initially */
+            margin-right: 0;
+            opacity: 0;
+            visibility: hidden;
             transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out, margin-right 0.3s ease-in-out;
         }
         #map.active {
-            opacity: 1; /* Show map after selection */
+            opacity: 1;
             visibility: visible;
         }
 
         #sidebar {
-            width: 100vw; /* Default: full viewport width for mobile overlay */
-            max-width: 320px; /* Limit sidebar width on larger screens */
+            width: 100vw;
+            max-width: 320px;
             height: 100%;
-            background-color: #f8fafc; /* gray-50 */
-            border-left: 1px solid #e2e8f0; /* gray-200 */
+            background-color: #f8fafc;
+            border-left: 1px solid #e2e8f0;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -52,12 +52,16 @@
             top: 0;
             right: 0;
             z-index: 1001;
-            transition: transform 0.3s ease-in-out;
-            transform: translateX(100%); /* Default: hidden on all screens */
+            transform: translateX(100%);
+            visibility: hidden;
+            opacity: 0;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, visibility 0s 0.3s;
         }
-
-        #sidebar.is-open { /* Class to explicitly open sidebar */
+        #sidebar.visible {
+            visibility: visible;
+            opacity: 1;
             transform: translateX(0);
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
         }
 
         #sidebar-header {
@@ -70,11 +74,10 @@
             flex-grow: 1;
         }
 
-        /* Toggle Button */
         #sidebar-toggle {
             position: absolute;
             top: 15px;
-            right: 15px; /* Default: always on the right edge of the map */
+            right: 15px;
             z-index: 1002;
             background-color: white;
             border: 1px solid #e2e8f0;
@@ -82,35 +85,27 @@
             padding: 8px;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: right 0.3s ease-in-out;
-            display: none; /* Hide toggle button initially until map is active */
+            display: block;
+            visibility: hidden;
+            opacity: 0;
+            transition: right 0.3s ease-in-out, opacity 0.3s ease-in-out, visibility 0s 0.3s;
+        }
+        #sidebar-toggle.visible {
+            visibility: visible;
+            opacity: 1;
+            transition: right 0.3s ease-in-out, opacity 0.3s ease-in-out;
         }
 
-        /* Media queries for larger screens (e.g., tablets and desktops) */
-        @media (min-width: 768px) { /* md breakpoint in Tailwind */
-            #map.active {
-                margin-right: 320px; /* Make space for sidebar on larger screens when active */
-            }
+        @media (min-width: 768px) {
             #sidebar {
-                width: 320px; /* Fixed width on larger screens */
-                transform: translateX(0); /* Always visible by default on desktop */
-            }
-            #sidebar.is-closed-on-desktop { /* Class to hide sidebar specifically on desktop */
-                transform: translateX(100%);
-            }
-            #sidebar-toggle {
-                right: 335px; /* Pushed by the sidebar on larger screens */
-            }
-            #sidebar.is-closed-on-desktop + #sidebar-toggle {
-                right: 15px; /* Move back to map edge when hidden on desktop */
+                width: 320px;
             }
         }
         
-        /* Filter styling */
         .filter-option {
             margin-bottom: 12px;
             display: flex;
-            flex-direction: column; /* Stack label and list */
+            flex-direction: column;
         }
         .filter-option label {
             display: flex;
@@ -125,7 +120,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        .filter-option input[type="radio"] {
+        .filter-option input[type="checkbox"] {
             margin-left: 12px;
             width: 18px;
             height: 18px;
@@ -133,47 +128,69 @@
             opacity: 0;
             pointer-events: none;
         }
-        /* Custom radio button appearance */
-        .custom-radio {
+        .custom-checkbox {
             width: 18px;
             height: 18px;
             border: 2px solid #ccc;
-            border-radius: 50%;
+            border-radius: 4px;
             display: inline-block;
             margin-left: 12px;
             position: relative;
             flex-shrink: 0;
         }
-        .custom-radio::after {
+        .custom-checkbox::after {
             content: '';
-            width: 10px;
-            height: 10px;
-            background: #3b82f6; /* Blue for checked state */
+            width: 12px;
+            height: 12px;
+            background: #3b82f6;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) scale(0);
-            border-radius: 50%;
+            border-radius: 2px;
             transition: transform 0.2s ease-in-out;
         }
-        .filter-option input[type="radio"]:checked + label .custom-radio::after {
+        .filter-option input[type="checkbox"]:checked + label .custom-checkbox::after {
             transform: translate(-50%, -50%) scale(1);
         }
 
-        .filter-option input[type="radio"]:checked + label span {
+        .filter-option input[type="checkbox"]:checked + label span {
             font-weight: 700;
         }
         .filter-option label:hover {
             background-color: #f1f5f9;
         }
-        .color-box {
-            width: 18px;
-            height: 18px;
-            margin-left: 12px;
+        .lightning-icon-marker {
+            width: 28px;
+            height: 28px;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             border-radius: 4px;
-            border: 1px solid rgba(0,0,0,0.1);
-            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        .lightning-icon-marker svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+
+        .lightning-icon-sidebar-wrapper {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+            margin-left: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .lightning-icon-sidebar-wrapper svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+
         .station-list {
             list-style: none;
             padding: 0;
@@ -187,8 +204,8 @@
             transition: max-height 0.3s ease-out;
             box-sizing: border-box;
         }
-        .filter-option input[type="radio"]:checked ~ .station-list {
-            max-height: 500px; /* Adjust as needed for content, makes it "slide down" */
+        .filter-option.expanded .station-list {
+            max-height: 500px;
             border-top: 1px solid #e2e8f0;
         }
         .station-list li {
@@ -196,7 +213,7 @@
             padding-right: 20px;
             cursor: pointer;
             transition: background-color 0.2s;
-            font-size: 16px; /* Increased font size for station names */
+            font-size: 16px;
             border-top: 1px solid #edf2f7;
         }
         .station-list li:first-child {
@@ -206,47 +223,46 @@
             background-color: #e0f2fe;
             color: #0c4a6e;
         }
-        /* Custom popup styling for larger card */
+
         .custom-popup .leaflet-popup-content-wrapper {
-            border-radius: 1rem; /* rounded-xl */
-            padding: 1.5rem; /* More padding */
+            border-radius: 1rem;
+            padding: 1.5rem;
             background-color: #ffffff;
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* Larger shadow */
-            max-width: 300px; /* Max width for the card */
-            min-width: 250px; /* Min width */
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            max-width: 300px;
+            min-width: 250px;
         }
         .custom-popup .leaflet-popup-content {
-            margin: 0; /* Remove default margin from Leaflet */
+            margin: 0;
             text-align: center;
         }
         .custom-popup .popup-title {
-            font-weight: 800; /* Extra bold */
-            font-size: 1.5rem; /* Larger font size */
-            margin-bottom: 0.5rem; /* Smaller margin below title */
-            color: #1f2937; /* Darker text */
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #1f2937;
         }
         .custom-popup .popup-description {
-            font-size: 0.95rem; /* Slightly larger description font */
-            color: #4b5563; /* Gray text */
-            margin-bottom: 1rem; /* More space before button */
+            font-size: 0.95rem;
+            color: #4b5563;
+            margin-bottom: 1rem;
             line-height: 1.5;
         }
         .custom-popup .nav-link {
             display: inline-block;
-            padding: 0.75rem 1.25rem; /* Larger padding for button */
+            padding: 0.75rem 1.25rem;
             background-color: #3b82f6;
             color: white;
             text-decoration: none;
-            border-radius: 0.5rem; /* More rounded */
-            font-size: 1rem; /* Larger button text */
-            font-weight: 600; /* Semi-bold */
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
             transition: background-color 0.2s ease-in-out;
         }
         .custom-popup .nav-link:hover {
-            background-color: #2563eb; /* Darker blue on hover */
+            background-color: #2563eb;
         }
 
-        /* Modal Styles */
         #map-selector-modal {
             position: fixed;
             top: 0;
@@ -262,74 +278,90 @@
         }
         #map-selector-modal.hidden {
             opacity: 0;
-            pointer-events: none; /* Disable interactions when hidden */
+            pointer-events: none;
         }
         #map-selector-content {
             background-color: white;
-            padding: 2.5rem; /* Increased padding */
-            border-radius: 1rem; /* Rounded corners */
+            padding: 2.5rem;
+            border-radius: 1rem;
             text-align: center;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
             max-width: 500px;
             width: 90%;
-            transform: translateY(-20px); /* Slight animation on appearance */
+            transform: translateY(-20px);
             transition: transform 0.3s ease-in-out;
         }
         #map-selector-modal.hidden #map-selector-content {
             transform: translateY(-50px);
         }
         #map-selector-content h2 {
-            font-size: 1.875rem; /* text-3xl */
-            font-weight: 700; /* font-bold */
-            margin-bottom: 1.5rem; /* mb-6 */
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
             color: #1f2937;
         }
         .map-option-button {
             display: block;
             width: 100%;
-            padding: 1rem 1.5rem; /* py-4 px-6 */
-            margin-bottom: 1rem; /* mb-4 */
-            background-color: #3b82f6; /* blue-500 */
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            background-color: #3b82f6;
             color: white;
             border: none;
-            border-radius: 0.5rem; /* rounded-lg */
-            font-size: 1.125rem; /* text-lg */
-            font-weight: 600; /* font-semibold */
+            border-radius: 0.5rem;
+            font-size: 1.125rem;
+            font-weight: 600;
             cursor: pointer;
             transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
         }
-        .map-option-button:hover {
-            background-color: #2563eb; /* blue-600 */
+        .map-option-button:hover:not(:disabled) {
+            background-color: #2563eb;
             transform: translateY(-2px);
         }
         .map-option-button:last-child {
             margin-bottom: 0;
+        }
+        .map-option-button:disabled {
+            background-color: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.7;
         }
 
         /* Custom Copyright Style */
         #custom-copyright {
             position: absolute;
             bottom: 10px;
-            left: 10px;
+            left: 50%; /* Center horizontally */
+            transform: translateX(-50%); /* Adjust for true centering */
             z-index: 1000;
-            color: #4b5563; /* gray-600 */
-            font-size: 0.875rem; /* text-sm */
+            color: #4b5563;
+            font-size: 1rem; /* Increased font size */
             background-color: rgba(255, 255, 255, 0.7);
             padding: 4px 8px;
             border-radius: 4px;
-            pointer-events: none; /* Allow clicks through */
+            pointer-events: none;
+            line-height: 1.2; 
+            white-space: nowrap; /* Prevent text wrapping */
         }
+
+        /* Leaflet Control Layer Custom Position */
+        .leaflet-control-layers.leaflet-bottom.leaflet-left {
+            bottom: 100px !important; /* Adjusted to be higher up, above copyright */
+            left: 10px !important;
+            font-size: 1.125rem; /* Increased font size for layers control */
+        }
+
     </style>
 </head>
 <body>
 
-    <!-- Map Selector Modal -->
     <div id="map-selector-modal">
         <div id="map-selector-content">
             <h2>اختر طريقة عرض الخريطة</h2>
-            <button class="map-option-button" data-map-type="terrain">خريطة التضاريس</button>
-            <button class="map-option-button" data-map-type="streets">خريطة الشوارع</button>
-            <button class="map-option-button" data-map-type="satellite">القمر الصناعي (شوارع وعلامات)</button>
+            <button class="map-option-button" data-map-type="terrain" disabled>خريطة التضاريس</button>
+            <button class="map-option-button" data-map-type="streets" disabled>خريطة الشوارع</button>
+            <button class="map-option-button" data-map-type="satellite" disabled>القمر الصناعي (شوارع وعلامات)</button>
+            <hr class="my-6 border-gray-300"> 
             <div class="mt-4 text-sm text-gray-600">Designed by Mazen Makhoul</div>
         </div>
     </div>
@@ -342,6 +374,10 @@
             <div id="filter-container">
                 <!-- Filter options will be inserted here -->
             </div>
+            <div class="mt-4 flex flex-col space-y-2">
+                <button id="show-all-btn" class="map-option-button bg-green-500 hover:bg-green-600">إظهار الكل</button>
+                <button id="hide-all-btn" class="map-option-button bg-red-500 hover:bg-red-600">إخفاء الكل</button>
+            </div>
         </div>
     </div>
 
@@ -351,7 +387,6 @@
 
     <div id="map"></div>
 
-    <!-- Custom Copyright -->
     <div id="custom-copyright">
         Developed by Mazen Makhoul
     </div>
@@ -359,15 +394,13 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // --- Data Structure (Parsed from your CSV files) ---
-        // Note: X corresponds to Longitude, Y to Latitude in your CSVs. Leaflet uses [Latitude, Longitude].
         const stationsData = [
             // صيانة الشرق
             { id: "alrisha400", name: "محطة الريشة 400", region: "صيانة الشرق", coords: [32.5689, 39.0141471], description: "400 ك.ف" },
             { id: "alrisha11_132", name: "محطة الريشة (11/132) ك.ف", region: "صيانة الشرق", coords: [32.572323, 39.0107256], description: "( 11/132 ) ك.ف" },
             { id: "alruwaished", name: "محطة الرويشد", region: "صيانة الشرق", coords: [32.4951511, 38.1965012], description: "( 33/132 ) ك.ف" },
             { id: "alsafawi", name: "محطة الصفاوي", region: "صيانة الشرق", coords: [32.1987671, 37.1177781], description: "( 33/132 ) ك.ف" },
-            { id: "alsafawisolar", name: "محطة الصفاوي الشمسية", region: "صيانة الشرق", coords: [32.0936842, 37.024402], description: "( 132 ) ك.ف" },
+            { id: "alsafawisolar", name: "محطة الصفاوي الشمسية", region: "صيانة الشرق", coords: [32.0936842, 37.024402], description: "132 ك.ف" },
             { id: "alazraq", name: "محطة الازرق", region: "صيانة الشرق", coords: [31.8702305, 36.7655758], description: "( 33/132 /11 ) ك.ف" },
             { id: "alethaa", name: "محطة الاذاعة", region: "صيانة الشرق", coords: [31.7306144, 36.4573091], description: "( 33/132 ) ك.ف" },
             { id: "almwaqarind", name: "محطة الموقر الصناعية", region: "صيانة الشرق", coords: [31.7922558, 36.227272], description: "( 33/132 ) ك.ف" },
@@ -450,272 +483,237 @@
             { id: "maan", name: "محطة معان", region: "صيانة معان", coords: [30.2068049, 35.7285631], description: "132 ك.ف" },
             { id: "alhusseinuni", name: "محطة جامعة الحسين", region: "صيانة معان", coords: [30.2506879, 35.6949856], description: "132 ك.ف" },
             { id: "maansolar", name: "محطة معان الشمسية", region: "صيانة معان", coords: [30.1579119, 35.8155303], description: "132 ك.ف" },
-            { id: "alshidiya", name: "محطة الشيدية", region: "صيانة معان", coords: [29.930958, 36.1350069], description: "132 ك.ف" },
+            { id: "alshidiya", name: "محطة الشيدية", region: "صيانة معان", coords: [29.930958, 36.1350069], description: "132 ك.f" },
             { id: "aldeesi", name: "محطة الديسي", region: "صيانة معان", coords: [29.4471293, 35.8254278], description: "132 ك.ف" },
             { id: "alrajef", name: "محطة الراجف", region: "صيانة معان", coords: [30.157497, 35.4375926], description: "132 ك.ف" }
         ];
 
-        let map; // Declare map globally so it can be accessed after initialization
+        let map;
+        let esriTopo, openStreetMap, googleHybrid;
+        let mapLayers = {};
+        const markers = {};
 
-        // Define base map layers with empty attribution
-        const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '', // Hidden
-            maxZoom: 18
-        });
+        const LIGHTNING_SVG_PATH = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" stroke="currentColor" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
 
-        const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '', // Hidden
-            maxZoom: 19
-        });
-
-        // Google Satellite Hybrid-like Layer (Satellite with Roads and Labels)
-        const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
-            maxZoom: 20,
-            subdomains:['mt0','mt1','mt2','mt3'],
-            attribution: '' // Hidden
-        });
-        
-        // Map layers object for easy access
-        const mapLayers = {
-            terrain: esriTopo,
-            streets: openStreetMap,
-            satellite: googleHybrid
-        };
-
-        // --- Regions Configuration (Colors and Layer Groups) ---
         const regions = {};
-        // Define the custom order of regions
-        const customRegionOrder = [
-            "صيانة الشمال",
-            "صيانة الشرق",
-            "صيانة الوسط",
-            "صيانة الكرك",
-            "صيانة معان",
-            "صيانة العقبة"
-        ];
-        // Ensure all unique regions from data are covered, or use this fixed list
-        // If there are regions in data not in customRegionOrder, they won't appear.
-        // For this specific request, we will only show regions in the custom order.
+        const customRegionOrder = ["صيانة الشمال", "صيانة الشرق", "صيانة الوسط", "صيانة الكرك", "صيانة معان", "صيانة العقبة"];
+        const colors = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#00bcd4', '#ffc107', '#9e9e9e'];
         
-        const colors = [
-            '#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#00bcd4', '#ffc107', '#9e9e9e'
-        ];
-        customRegionOrder.forEach((regionName, index) => { // Loop through custom order
+        customRegionOrder.forEach((regionName, index) => {
             regions[regionName] = { color: colors[index % colors.length], layer: L.layerGroup() };
         });
 
-        const markers = {};
-
-        // Group stations by region and create markers
         const stationsByRegion = stationsData.reduce((acc, station) => {
             if (!acc[station.region]) acc[station.region] = [];
             acc[station.region].push(station);
             return acc;
         }, {});
 
-        // --- Create Markers ---
         stationsData.forEach(station => {
             const regionInfo = regions[station.region];
-            if (!regionInfo) {
-                // console.warn(`Region "${station.region}" not found for station "${station.name}". Marker not created.`);
-                return; // Skip markers for regions not in customRegionOrder if any
-            }
-
+            if (!regionInfo) return;
             const colorIcon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div style="background-color:${regionInfo.color};" class="w-4 h-4 rounded-full border-2 border-white shadow-md"></div>`,
-                iconSize: [16, 16], iconAnchor: [8, 8]
+                html: `<div class="lightning-icon-marker" style="background-color:${regionInfo.color};">${LIGHTNING_SVG_PATH}</div>`,
+                iconSize: [28, 28], iconAnchor: [14, 14]
             });
-
-            // Enhanced popup content with description
             const popupContent = `
-                <div class="popup-title">${station.name}</div>
-                <p class="popup-description">${station.description}</p>
-                <a href="https://www.google.com/maps/dir/?api=1&destination=${station.coords[0]},${station.coords[1]}" target="_blank" class="nav-link">توجه إلى الموقع</a>
+                <div class="custom-popup">
+                    <div class="popup-title">${station.name}</div>
+                    <p class="popup-description">${station.description}</p>
+                    <a href="https://www.google.com/maps?q=${station.coords[0]},${station.coords[1]}" target="_blank" class="nav-link">توجه إلى الموقع</a>
+                </div>
             `;
-
-            const marker = L.marker(station.coords, { icon: colorIcon })
-                .bindPopup(popupContent, { className: 'custom-popup' });
-            
+            const marker = L.marker(station.coords, { icon: colorIcon }).bindPopup(popupContent, { className: 'custom-popup' });
             regionInfo.layer.addLayer(marker);
             markers[station.id] = marker;
         });
 
-
-        // --- Create Sidebar Filters ---
         const filterContainer = document.getElementById('filter-container');
-
-        // Add "Show All" option
-        const allOption = document.createElement('div');
-        allOption.className = 'filter-option';
-        const allRadioId = 'all-regions-radio';
-        allOption.innerHTML = `
-            <input type="radio" id="${allRadioId}" name="region-filter" value="all" checked>
-            <label for="${allRadioId}">
-                <div class="custom-radio"></div>
-                <div class="color-box bg-gray-400"></div>
-                <span>إظهار الكل</span>
-            </label>
-            <ul class="station-list"></ul>
-        `;
-        filterContainer.appendChild(allOption);
-        
-        // Add options for each region based on custom order
         customRegionOrder.forEach(regionName => {
-            const regionStations = stationsByRegion[regionName] || [];
-            
+            const regionInfo = regions[regionName];
+            if (!regionInfo) return;
+
             const option = document.createElement('div');
             option.className = 'filter-option';
-
-            const radioId = `${regionName.replace(/\s/g, '')}-radio`; 
+            const checkboxId = `${regionName.replace(/\s/g, '')}-checkbox`;
 
             let stationListHTML = '<ul class="station-list">';
-            regionStations.forEach(station => {
-                stationListHTML += `<li data-station-id="${station.id}">${station.name}</li>`;
+            const stationsInCurrentRegion = stationsByRegion[regionName] || []; 
+            stationsInCurrentRegion.forEach(station => {
+                if(station.name) {
+                    stationListHTML += `<li data-station-id="${station.id}">${station.name}</li>`;
+                }
             });
             stationListHTML += '</ul>';
 
             option.innerHTML = `
-                <input type="radio" id="${radioId}" name="region-filter" value="${regionName}">
-                <label for="${radioId}">
-                    <div class="custom-radio"></div>
-                    <div class="color-box" style="background-color: ${regions[regionName].color};"></div>
+                <input type="checkbox" id="${checkboxId}" name="region-filter" value="${regionName}">
+                <label for="${checkboxId}">
+                    <div class="custom-checkbox"></div>
+                    <div class="lightning-icon-sidebar-wrapper" style="background-color: ${regionInfo.color};">
+                        ${LIGHTNING_SVG_PATH}
+                    </div>
                     <span>${regionName}</span>
                 </label>
                 ${stationListHTML}
             `;
             filterContainer.appendChild(option);
         });
-
-        // --- Event Listeners ---
         
-        // Filter logic (now also controls station list visibility via CSS)
-        filterContainer.addEventListener('change', (e) => {
-            if (e.target.name === 'region-filter') {
-                const selectedRegion = e.target.value;
-                Object.keys(regions).forEach(regionName => {
-                    const layer = regions[regionName].layer;
-                    if (selectedRegion === 'all' || selectedRegion === regionName) {
-                        if (!map.hasLayer(layer)) map.addLayer(layer);
-                    } else {
-                        if (map.hasLayer(layer)) map.removeLayer(layer);
-                    }
-                });
-            }
-        });
-
-        // Station list click logic
-        filterContainer.addEventListener('click', (e) => {
-            if (e.target.tagName === 'LI') {
-                const stationId = e.target.dataset.stationId;
-                const station = stationsData.find(s => s.id === stationId);
-                if (station) {
-                    const marker = markers[stationId];
-                    if (marker) {
-                        map.flyTo(marker.getLatLng(), 15);
-                        marker.openPopup();
-                    }
-                }
-            }
-        });
-
-        // Sidebar and map elements
-        const sidebar = document.getElementById('sidebar');
-        const toggleButton = document.getElementById('sidebar-toggle');
-        const mapContainer = document.getElementById('map');
-        
-        // Function to set initial layout based on screen width
-        const setInitialLayout = () => {
-            if (window.innerWidth >= 768) { // Desktop (md breakpoint and up)
-                sidebar.classList.remove('is-open'); // Ensure it's not mobile-forced open
-                sidebar.classList.remove('is-closed-on-desktop'); // Reset desktop close state
-                sidebar.style.transform = 'translateX(0)'; // Explicitly make it visible
-                mapContainer.style.marginRight = '320px'; // Push map to make space
-                toggleButton.style.right = '335px'; // Position button next to sidebar
-                toggleButton.style.display = 'block'; // Show toggle button
-            } else { // Mobile/Tablet (below md breakpoint)
-                sidebar.classList.remove('is-open'); // Ensure sidebar is hidden by default (via CSS transform)
-                sidebar.classList.remove('is-closed-on-desktop'); // Clean up desktop-specific classes
-                mapContainer.style.marginRight = '0'; // Map takes full width
-                toggleButton.style.right = '15px'; // Position button on map edge
-                toggleButton.style.display = 'block'; // Show toggle button
-            }
-            if (map) { // Only invalidate if map is initialized
-                map.invalidateSize(); 
-            }
-        };
-
-        // Modal elements
-        const mapSelectorModal = document.getElementById('map-selector-modal');
-        const mapOptionButtons = document.querySelectorAll('.map-option-button');
-
-        // Handle map selection from the modal
-        mapOptionButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                const mapType = e.target.dataset.mapType;
-                
-                // Initialize map if not already done
-                if (!map) {
-                    map = L.map('map').setView([31.0, 36.5], 7.5); // Centered on Jordan
-                    // Add Layer Control after map initialization
-                    const baseMaps = {
-                        "خريطة التضاريس": mapLayers.terrain,
-                        "خريطة الشوارع": mapLayers.streets,
-                        "القمر الصناعي (شوارع وعلامات)": mapLayers.satellite 
-                    };
-                    L.control.layers(baseMaps, {}, { position: 'bottomleft' }).addTo(map);
-                }
-
-                // Add selected base layer to map
-                mapLayers[mapType].addTo(map);
-                
-                // Add all station markers layers
-                Object.values(regions).forEach(region => {
-                    if (!map.hasLayer(region.layer)) {
-                        map.addLayer(region.layer);
-                    }
-                });
-
-                // Hide the modal and show the map
-                mapSelectorModal.classList.add('hidden');
-                mapContainer.classList.add('active'); // Activate map visibility/opacity
-
-                // Set initial layout for sidebar and map based on current screen size
-                setInitialLayout();
-            });
-        });
-
-        // Listen for window resize to adjust layout
-        window.addEventListener('resize', () => {
-            setInitialLayout();
-        });
-
-        // Initial setup on DOMContentLoaded: show modal first
         document.addEventListener('DOMContentLoaded', () => {
-            mapSelectorModal.classList.remove('hidden'); 
-            // setInitialLayout will be called after map selection
-        });
+            const mapSelectorModal = document.getElementById('map-selector-modal');
+            const mapOptionButtons = document.querySelectorAll('.map-option-button[data-map-type]');
+            
+            esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri'
+            });
+            openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            });
+            googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+                maxZoom: 20,
+                subdomains:['mt0','mt1','mt2','mt3'],
+                attribution: 'Map data &copy;2024 Google'
+            });
+            
+            mapLayers = {
+                "خريطة التضاريس": esriTopo,
+                "خريطة الشوارع": openStreetMap,
+                "القمر الصناعي": googleHybrid
+            };
 
-        // Toggle button click handler for sidebar
-        toggleButton.addEventListener('click', () => {
-            if (window.innerWidth < 768) { // Mobile/Tablet behavior (sidebar overlays)
-                sidebar.classList.toggle('is-open'); // Toggle 'is-open' for mobile
-                // Map margin and toggle button position remains fixed for mobile overlay
-            } else { // Desktop/Larger screen behavior (sidebar pushes map)
-                sidebar.classList.toggle('is-closed-on-desktop'); // Toggle specific class for desktop hiding
-                const isClosedOnDesktop = sidebar.classList.contains('is-closed-on-desktop');
-                if (isClosedOnDesktop) { // Sidebar is hidden on desktop
-                    mapContainer.style.marginRight = '0';
-                    toggleButton.style.right = '15px';
-                } else { // Sidebar is visible on desktop
-                    mapContainer.style.marginRight = '320px';
-                    toggleButton.style.right = '335px';
+            mapOptionButtons.forEach(button => button.disabled = false);
+
+            map = L.map('map', {
+                center: [31.0, 37.0],
+                zoom: 7,
+                zoomControl: false
+            });
+            L.control.zoom({ position: 'topleft' }).addTo(map);
+
+            L.control.layers(mapLayers, {}, { position: 'bottomleft', collapsed: false }).addTo(map);
+
+            mapOptionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const mapType = button.getAttribute('data-map-type');
+                    Object.values(mapLayers).forEach(layer => {
+                        if (map.hasLayer(layer)) map.removeLayer(layer);
+                    });
+                    if (mapType === 'terrain') esriTopo.addTo(map);
+                    if (mapType === 'streets') openStreetMap.addTo(map);
+                    if (mapType === 'satellite') googleHybrid.addTo(map);
+                    mapSelectorModal.classList.add('hidden');
+                    document.getElementById('map').classList.add('active');
+                    document.getElementById('sidebar').classList.add('visible');
+                    document.getElementById('sidebar-toggle').classList.add('visible');
+                    setTimeout(() => map.invalidateSize(), 300);
+                });
+            });
+
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const mapContainer = document.getElementById('map');
+            const sidebarWidth = 320;
+
+            sidebarToggle.addEventListener('click', () => {
+                const isVisible = sidebar.classList.toggle('visible');
+                if (window.innerWidth >= 768) {
+                    if (isVisible) {
+                        mapContainer.style.marginRight = `${sidebarWidth}px`;
+                        sidebarToggle.style.right = `${sidebarWidth + 15}px`;
+                    } else {
+                        mapContainer.style.marginRight = '0';
+                        sidebarToggle.style.right = '15px';
+                    }
+                    setTimeout(() => map.invalidateSize(), 300);
                 }
-            }
-            // Invalidate map size after layout changes
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 300); // Should match the CSS transition duration
+            });
+
+            const checkboxes = document.querySelectorAll('input[name="region-filter"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const regionName = checkbox.value;
+                    if (regions[regionName]) {
+                        if (checkbox.checked) {
+                            if (!map.hasLayer(regions[regionName].layer)) {
+                                map.addLayer(regions[regionName].layer);
+                            }
+                        } else {
+                            if (map.hasLayer(regions[regionName].layer)) {
+                                map.removeLayer(regions[regionName].layer);
+                            }
+                        }
+                    }
+                });
+            });
+            
+            document.getElementById('show-all-btn').addEventListener('click', () => {
+                checkboxes.forEach(cb => {
+                    if (!cb.checked) {
+                        cb.checked = true;
+                        const event = new Event('change');
+                        cb.dispatchEvent(event);
+                    }
+                });
+                document.getElementById('show-all-btn').disabled = true;
+                document.getElementById('show-all-btn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('hide-all-btn').disabled = false;
+                document.getElementById('hide-all-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+            });
+
+            document.getElementById('hide-all-btn').addEventListener('click', () => {
+                checkboxes.forEach(cb => {
+                    if (cb.checked) {
+                        cb.checked = false;
+                        const event = new Event('change');
+                        cb.dispatchEvent(event);
+                    }
+                });
+                document.getElementById('hide-all-btn').disabled = true;
+                document.getElementById('hide-all-btn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('show-all-btn').disabled = false;
+                document.getElementById('show-all-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+            });
+
+            filterContainer.addEventListener('click', (e) => {
+                if (e.target.tagName === 'LI') {
+                    const stationId = e.target.dataset.stationId;
+                    const station = stationsData.find(s => s.id === stationId);
+                    if (station) {
+                        const marker = markers[stationId];
+                        if (marker) {
+                            if (map) { 
+                                map.flyTo(marker.getLatLng(), 15);
+                                marker.openPopup();
+                                // Close sidebar after clicking a station
+                                if (window.innerWidth < 768) { 
+                                    sidebar.classList.remove('visible');
+                                } else {
+                                    sidebar.classList.remove('visible');
+                                    mapContainer.style.marginRight = '0';
+                                    sidebarToggle.style.right = '15px';
+                                }
+                                setTimeout(() => map.invalidateSize(), 300);
+                            }
+                        }
+                    }
+                }
+                 // Toggle expand/collapse for filter options when label is clicked
+                if (e.target.tagName === 'LABEL' || e.target.closest('LABEL')) {
+                    const label = e.target.closest('LABEL');
+                    const filterOption = label.closest('.filter-option');
+                    if (filterOption) {
+                        filterOption.classList.toggle('expanded');
+                    }
+                }
+            });
+
+            // Initial state: "Show All" is enabled, "Hide All" is disabled
+            document.getElementById('show-all-btn').disabled = false;
+            document.getElementById('show-all-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('hide-all-btn').disabled = true;
+            document.getElementById('hide-all-btn').classList.add('opacity-50', 'cursor-not-allowed');
         });
     </script>
 </body>
